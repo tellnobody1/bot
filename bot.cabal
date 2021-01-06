@@ -34,5 +34,6 @@ executable my-exe
     , bytestring
     , network
     , network-run
+    , stringsearch
     , utf8-string
   default-language: Haskell2010

@@ -7,7 +7,9 @@ import Control.Monad (when)
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.ByteString.Lazy (ByteString, empty, length)
 import Data.ByteString.Lazy.Char8 (splitWith, split)
+import qualified Data.ByteString.UTF8 as BS (toString, fromString)
 import Data.ByteString.Lazy.UTF8 (toString, fromString)
+import Data.ByteString.Lazy.Search (breakOn, breakAfter)
 import Data.List (isPrefixOf)
 import GHC.Generics (Generic)
 import Network.Run.TCP (runTCPServer)
@@ -23,13 +25,11 @@ main = do
   where
   talk s = do
     msg <- recv s 1024
-    let ls = splitWith (\x -> x=='\r'||x=='\n') msg
-    -- putStrLn $ toString $ head ls
-    -- putStrLn $ toString $ last ls
     secret <- getEnv "botsecret"
+    let mp = fst $ breakOn (BS.fromString " HTTP/") msg
     let res =
-          if (map toString $ take 2 $ split ' ' $ head ls) == ["POST", "/bot"<>secret]
-            then response $ process $ last ls
+          if mp == (fromString $ "POST /bot"<>secret)
+            then response $ process $ snd $ breakAfter (BS.fromString "\r\n\r\n") msg
             else response $ empty
     sendAll s res
     talk s

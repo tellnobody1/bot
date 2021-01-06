@@ -16,6 +16,7 @@ dependencies:
 - network-run
 - network
 - utf8-string
+- stringsearch
 
 executables:
   my-exe:
