@@ -5,13 +5,13 @@ module Main where
 import Control.Monad (when)
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.ByteString.Lazy (ByteString, empty, length)
-import Data.ByteString.Lazy.Char8 (lines)
+import Data.ByteString.Lazy.Char8 (splitWith)
 import Data.ByteString.Lazy.UTF8 (toString, fromString)
 import Data.List (isPrefixOf)
 import GHC.Generics (Generic)
 import Network.Run.TCP (runTCPServer)
 import Network.Socket.ByteString.Lazy (recv, sendAll)
-import Prelude hiding (lines, length, id)
+import Prelude hiding (length, id)
 import System.Environment (getEnv)
 
 main :: IO ()
@@ -22,7 +22,7 @@ main = do
   where
   talk s = do
     msg <- recv s 1024
-    let ls = lines msg
+    let ls = splitWith (\x -> x=='\r'||x=='\n') msg
     putStrLn $ toString $ head ls
     putStrLn $ toString $ last ls
     tgh <- tgHeader
@@ -75,4 +75,4 @@ response x = fromString (
 tgHeader :: IO ByteString
 tgHeader = do
   secret <- getEnv "botsecret"
-  pure $ fromString $ "POST /bot"<>secret<>" HTTP/1.0\r"
+  pure $ fromString $ "POST /bot"<>secret<>" HTTP/1.0"

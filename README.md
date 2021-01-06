@@ -1,10 +1,7 @@
 # bot
 
 ```
-cabal update
-cabal build
 export botsecret=123
-cabal run
-nc localhost 3000
-> test
+stack run
+echo -ne 'POST /bot123 HTTP/1.0\r\n\r\n{"message":"test","chat":{"id":1}}' | nc localhost 3000
 ```
