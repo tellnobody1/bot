@@ -20,5 +20,6 @@ executable bot
     network,
     network-run,
     bytestring,
-    utf8-string
+    utf8-string,
+    aeson
   default-language:    Haskell2010
