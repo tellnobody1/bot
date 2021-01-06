@@ -6,7 +6,7 @@ module Main where
 import Control.Monad (when)
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.ByteString.Lazy (ByteString, empty, length)
-import Data.ByteString.Lazy.Char8 (splitWith)
+import Data.ByteString.Lazy.Char8 (splitWith, split)
 import Data.ByteString.Lazy.UTF8 (toString, fromString)
 import Data.List (isPrefixOf)
 import GHC.Generics (Generic)
@@ -24,12 +24,13 @@ main = do
   talk s = do
     msg <- recv s 1024
     let ls = splitWith (\x -> x=='\r'||x=='\n') msg
-    putStrLn $ toString $ head ls
-    putStrLn $ toString $ last ls
-    tgh <- tgHeader
+    -- putStrLn $ toString $ head ls
+    -- putStrLn $ toString $ last ls
+    secret <- getEnv "botsecret"
     let res =
-          if tgh == head ls then response $ process $ last ls
-          else                   response $ empty
+          if (map toString $ take 2 $ split ' ' $ head ls) == ["POST", "/bot"<>secret]
+            then response $ process $ last ls
+            else response $ empty
     sendAll s res
     talk s
 
@@ -77,8 +78,3 @@ response x = fromString (
   \Content-Length: "<> (show $ length x) <>"\r\n\
   \\r\n\
   \") <> x
-
-tgHeader :: IO ByteString
-tgHeader = do
-  secret <- getEnv "botsecret"
-  pure $ fromString $ "POST /bot"<>secret<>" HTTP/1.0"
