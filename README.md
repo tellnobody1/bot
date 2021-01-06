@@ -1,7 +1,12 @@
 # bot
 
-```
+```sh
 export botsecret=123
 stack run
-echo -ne 'POST /bot123 HTTP/1.0\r\n\r\n{"message":"test","chat":{"id":1}}' | nc localhost 3000
+```
+
+## tests
+
+```sh
+curl -i --http1.0 --request POST http://localhost:8080/bot123 -d '{"message":{"chat":{"id":1},"text":"telegram"}}'
 ```

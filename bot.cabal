@@ -21,7 +21,7 @@ source-repository head
   type: git
   location: https://github.com/tellnobody1/bot
 
-executable bot
+executable my-exe
   main-is: Main.hs
   other-modules:
       Paths_bot

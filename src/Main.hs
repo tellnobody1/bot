@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Main where
 
@@ -33,8 +34,12 @@ main = do
     talk s
 
 data In = In
-  { message :: String
-  , chat :: Chat
+  { message :: Message
+  } deriving Generic
+
+data Message = Message
+  { chat :: Chat
+  , text :: String
   } deriving Generic
 
 data Chat = Chat
@@ -42,14 +47,15 @@ data Chat = Chat
   } deriving Generic
 
 instance FromJSON Chat
+instance FromJSON Message
 instance FromJSON In
 
 process :: ByteString -> ByteString
 process x =
   case decode x of
     Nothing -> empty
-    Just In { message="/start", chat=Chat{id=id} } -> tgMsg "Type a keyword, please." id
-    Just In { message= message, chat=Chat{id=id} } -> tgMsg message id
+    Just In { message=Message{text="/start", chat=Chat{id=id}}} -> tgMsg "Type a keyword, please." id
+    Just In { message=Message{text=    text, chat=Chat{id=id}}} -> tgMsg text id
 
 data Out = Out
   { chat_id :: Int
