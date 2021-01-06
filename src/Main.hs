@@ -73,7 +73,7 @@ tgMsg msg chat_id = encode $ msgOut msg chat_id
 response :: ByteString -> ByteString
 response x = fromString (
   "HTTP/1.1 200 OK\r\n\
-  \Content-type: application/x-www-form-urlencoded\r\n\
+  \Content-Type: application/json\r\n\
   \Content-Length: "<> (show $ length x) <>"\r\n\
   \\r\n\
   \") <> x
