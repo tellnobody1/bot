@@ -16,7 +16,7 @@ import System.Environment (getEnv)
 
 main :: IO ()
 main = do
-  let port = "3000"
+  let port = "8080"
   putStrLn $ "http://localhost:"<>port
   runTCPServer Nothing port talk
   where
