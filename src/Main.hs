@@ -3,9 +3,9 @@
 
 module Main where
 
-import Control.Monad (when)
+import Control.Monad (unless)
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
-import Data.ByteString.Lazy (ByteString, empty, length)
+import Data.ByteString.Lazy (ByteString, empty, length, null)
 import Data.ByteString.Lazy.Char8 (splitWith, split)
 import qualified Data.ByteString.UTF8 as BS (toString, fromString)
 import Data.ByteString.Lazy.UTF8 (toString, fromString)
@@ -14,7 +14,7 @@ import Data.List (isPrefixOf)
 import GHC.Generics (Generic)
 import Network.Run.TCP (runTCPServer)
 import Network.Socket.ByteString.Lazy (recv, sendAll)
-import Prelude hiding (length, id)
+import Prelude hiding (length, id, null)
 import System.Environment (getEnv)
 
 main :: IO ()
@@ -24,15 +24,16 @@ main = do
   runTCPServer Nothing port talk
   where
   talk s = do
-    msg <- recv s 1024
-    secret <- getEnv "botsecret"
-    let mp = fst $ breakOn (BS.fromString " HTTP/") msg
-    let res =
-          if mp == (fromString $ "POST /bot"<>secret)
-            then response $ process $ snd $ breakAfter (BS.fromString "\r\n\r\n") msg
-            else response $ empty
-    sendAll s res
-    talk s
+    msg <- recv s 4096
+    unless (null msg) $ do
+      secret <- getEnv "botsecret"
+      let mp = fst $ breakOn (BS.fromString " HTTP/") msg
+      let res =
+            if mp == fromString ("POST /bot"<>secret)
+              then response $ process $ snd $ breakAfter (BS.fromString "\r\n\r\n") msg
+              else response $ empty
+      sendAll s res
+      talk s
 
 data In = In
   { message :: Message
