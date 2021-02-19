@@ -2,7 +2,7 @@
 
 ```sh
 export botsecret=123
-stack run
+sbt run
 ```
 
 ## tests

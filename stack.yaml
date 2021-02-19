@@ -1,3 +1,0 @@
-resolver: nightly-2021-01-05
-extra-deps:
-- network-run-0.2.4

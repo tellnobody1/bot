@@ -1,0 +1,6 @@
+[submodule "frontier"]
+	path = deps/frontier
+	url = http://github.com/zero-deps/frontier.git
+[submodule "db"]
+	path = deps/db
+	url = http://github.com/zero-deps/db.git
