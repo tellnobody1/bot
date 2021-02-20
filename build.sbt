@@ -17,6 +17,11 @@ scalacOptions ++= Seq(
 , "-language:strictEquality"
 )
 
+enablePlugins(JavaAppPackaging)
+mappings in (Compile, packageDoc) := Seq()
+
 turbo := true
 useCoursier := true
 Global / onChangedBuildSource := ReloadOnSourceChanges
+
+resolvers += Resolver.JCenterRepository
