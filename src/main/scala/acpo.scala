@@ -1,6 +1,6 @@
 import zio._
 
-val acpoHtml = Chunk.fromArray("""<!doctype html>
+val acpoHtml = """<!doctype html>
 <html lang="uk">
 <head>
   <meta charset="utf-8">
@@ -42,4 +42,4 @@ val acpoHtml = Chunk.fromArray("""<!doctype html>
     </script>
   </div>
 </body>
-</html>""".getBytes("utf8").nn)
+</html>""".toChunk
