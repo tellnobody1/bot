@@ -6,8 +6,10 @@ import zd.proto.api._
 
 val app =
   (for {
-    addr <- SocketAddress.inetSocketAddress(8002)
-    store <- ZIO.environment[Store]
+    port <- IO.succeed(8002)
+    _ <- putStrLn(s"http://localhost:$port")
+    addr <- SocketAddress.inetSocketAddress(port)
+    store <- ZIO.environment[Store with ZEnv]
     _  <- httpServer.bind(
             addr,
             IO.succeed(httpHandler.andThen(_.provide(store))),
