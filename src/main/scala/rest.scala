@@ -8,7 +8,7 @@ import zd.proto.api._
 val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Nothing, Response]] = {
   case Request("GET", Root / "acpo", _, _) => IO.succeed(response(acpoHtml, "text/html"))
 
-  case Request("POST", (Root / "acpo" / "link") ? ("id"->id & "fiz_id"->fiz_id & "token"->token), _, _) =>
+  case Request("POST", (Root / "acpo" / "link") ? ("id"*id & "fiz_id"*fiz_id & "token"*token), _, _) =>
     IO.succeed(notfound) //todo
 
   case Request("POST", Root / "bot" / x, _, body) => //todo: change webhook
