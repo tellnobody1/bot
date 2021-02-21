@@ -6,14 +6,15 @@ import ftier.{telegram=>tg,_}, ws._, udp._, http._
 import zd.proto.api._
 
 val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Nothing, Response]] = {
-  case Request("GET", url, _, _) if url startsWith "/acpo?" => IO.succeed(response(acpoHtml, "text/html"))
+  case Request("GET", Root / "acpo", _, _) => IO.succeed(response(acpoHtml, "text/html"))
 
-  case Request("POST", url, _, _) if url startsWith "/acpo_link?" => IO.succeed(notfound) //todo
+  case Request("POST", (Root / "acpo" / "link") ? ("id"->id & "fiz_id"->fiz_id & "token"->token), _, _) =>
+    IO.succeed(notfound) //todo
 
-  case Request("POST", url, _, body) if url startsWith "/bot" =>
+  case Request("POST", Root / "bot" / x, _, body) => //todo: change webhook
     (for {
       secret <- ZIO.require(NoSecret)(env("botsecret"))
-      _ <- IO.when(url != s"/bot$secret")(IO.fail(Attack))
+      _ <- IO.when(x != secret)(IO.fail(Attack))
       answer <- tg.reader.find(body) {
                   case tg.Update.PrivateQuery(chatId, q) if q.isStart =>
                     for {
@@ -21,7 +22,9 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Nothing, Response
                       xs <- IO.succeed(new Array[Byte](32))
                       _ <- IO.effectTotal(r.nextBytes(xs))
                       hex <- IO.effectTotal(xs.hex)
-                      a <- tg.writer.answerPrivateQuery(chatId, tg.QueryRes(s"http://localhost:8002/acpo_link?id=$hex"))
+                      //todo store.put(hex, chatId)
+                      url = s"https://bot.nobodytells.me/acpo?id=$hex"
+                      a  <- tg.writer.answerPrivateQuery(chatId, tg.QueryRes(url))
                     } yield a
                   case x => IO.fail(NotImplemented(x))
                 }
