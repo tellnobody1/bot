@@ -11,7 +11,7 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Nothing, Response
   case Request("POST", (Root / "acpo" / "link") ? ("id"*id & "fiz_id"*fiz_id & "token"*token), _, _) =>
     IO.succeed(notfound) //todo
 
-  case Request("POST", Root / "bot" / x, _, body) => //todo: change webhook
+  case Request("POST", Root / "bot" / x, _, body) =>
     (for {
       secret <- ZIO.require(NoSecret)(env("botsecret"))
       _ <- IO.when(x != secret)(IO.fail(Attack))
@@ -23,7 +23,7 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Nothing, Response
                       _ <- IO.effectTotal(r.nextBytes(xs))
                       hex <- IO.effectTotal(xs.hex)
                       _ <- put(Dat(hex), Dat(chatId.toBytes))
-                      url = s"https://bot.nobodytells.me/acpo?id=$hex"
+                      url = s"https://bot2.nobodytells.me/acpo?id=${hex.utf8}"
                       a  <- tg.writer.answerPrivateQuery(chatId, tg.QueryRes(url))
                     } yield a
                   case x => IO.fail(NotImplemented(x))

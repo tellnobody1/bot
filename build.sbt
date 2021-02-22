@@ -11,6 +11,8 @@ lazy val db = project.in(file("deps/db"))
 lazy val frontier = project.in(file("deps/frontier"))
 dependsOn(db, frontier)
 
+fork := true
+
 scalacOptions ++= Seq(
   "-language:postfixOps"
 , "-Yexplicit-nulls"
