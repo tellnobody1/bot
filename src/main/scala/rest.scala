@@ -18,18 +18,18 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Nothing, Response
       answer <- tg.reader.find(body) {
                   case tg.Update.PrivateQuery(chatId, q) if q.isStart =>
                     for {
-                      r <- IO.effectTotal(new SecureRandom)
+                      r <- IO.effectTotal(SecureRandom())
                       xs <- IO.succeed(new Array[Byte](32))
                       _ <- IO.effectTotal(r.nextBytes(xs))
                       hex <- IO.effectTotal(xs.hex)
-                      //todo store.put(hex, chatId)
+                      _ <- put(Dat(hex), Dat(chatId.toBytes))
                       url = s"https://bot.nobodytells.me/acpo?id=$hex"
                       a  <- tg.writer.answerPrivateQuery(chatId, tg.QueryRes(url))
                     } yield a
                   case x => IO.fail(NotImplemented(x))
                 }
     } yield response(answer, "application/json")).catchAll(e => for {
-      _ <- putStrLn(e.toString)
+      _ <- putStrLn(e.toString) //todo: move to bot.scala or remove
     } yield notfound)
 }
 
