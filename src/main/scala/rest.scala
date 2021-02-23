@@ -21,7 +21,7 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
       _ <- IO.when(x != secret)(IO.fail(Attack))
       answer <-
         tg.reader.find[Store with ZEnv, Err](body) {
-          case tg.Update.PrivateQuery(chatid, "/start") =>
+          case tg.Update.PrivateQuery(chatid, x: String) if x == "/start" || x.startsWith("/start ") =>
             for {
               r <- IO.effectTotal(SecureRandom())
               xs <- IO.succeed(new Array[Byte](32))
