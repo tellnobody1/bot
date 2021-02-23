@@ -17,7 +17,7 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
 
   case Request("POST", Root / "bot" / x, _, body) =>
     for {
-      secret <- ZIO.require[ZEnv, Err, String](NoSecret)(env("botsecret"))
+      secret <- ZIO.require[ZEnv, Err, String](NoSecret)(env("botsecret")) //todo: pass as param
       _ <- IO.when(x != secret)(IO.fail(Attack))
       answer <-
         tg.reader.find[Store with ZEnv, Err](body) {
@@ -31,13 +31,22 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
               url = s"https://bot2.nobodytells.me/acpo?id=${id.utf8}"
               a  <- tg.writer.answerPrivateQuery(chatid, tg.QueryRes(url))
             } yield a
+
           case tg.Update.PrivateQuery(chatid, "acpo") =>
             for {
-              dat <- ZIO.require(Attack)(get(Key(chatid.toBytes)))
-              ft <- dat.bytes.decode[(String,String)]
-              (fiz_id, token) = ft
-              a  <- tg.writer.answerPrivateQuery(chatid, tg.QueryRes("спробуйте пізніше"))
+              dat <- get(Key(chatid.toBytes))
+              res <-
+                dat match
+                  case Some(dat) =>
+                    for {
+                      ft <- dat.bytes.decode[(String,String)]
+                      (fiz_id, token) = ft
+                    } yield "наразі функціонал не працює"
+                  case None =>
+                    IO.succeed("виконайте /start знову")
+              a <- tg.writer.answerPrivateQuery(chatid, tg.QueryRes(res))
             } yield a
+
           case x => IO.fail(NotImplemented(x))
         }
     } yield response(answer, "application/json")
@@ -65,3 +74,4 @@ type Err = NoSecret.type | Attack.type | NotImplemented | SecurityException
 given MessageCodec[Tuple2[String,String]] = caseCodecIdx
 
 given CanEqual[String, tg.Query] = CanEqual.derived
+given CanEqual[None.type, Option[Dat]] = CanEqual.derived

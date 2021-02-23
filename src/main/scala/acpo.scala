@@ -36,7 +36,7 @@ val acpoHtml = """<!doctype html>
           let id = new URL(document.location).searchParams.get("id")
           fetch(`/acpo/link?id=${id}&fiz_id=${res.fiz_id}&token=${res.token}`, {
             method: "POST"
-          }).then(() => location.replace(`https://t.me/tellnobodybot?start=${id}`))
+          }).then(() => alert('Готово'))
         }))
       })
     </script>
