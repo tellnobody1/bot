@@ -1,6 +1,7 @@
 import java.security.SecureRandom
 import zero.ext._, option._
 import zio._, nio._, core._, clock._, stream._, console._, system._
+import zio.IO.{succeed, effectTotal, when, fail}
 import db._
 import ftier.{telegram=>tg,_}, ws._, udp._, http._
 import zd.proto._, api.MessageCodec, macrosapi._
@@ -17,16 +18,16 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
 
   case Request("POST", Root / "bot" / x, _, body) =>
     for {
-      secret <- ZIO.require[ZEnv, Err, String](NoSecret)(env("botsecret")) //todo: pass as param
-      _ <- IO.when(x != secret)(IO.fail(Attack))
+      secret <- ZIO.require[ZEnv, Err, String](NoSecret)(env("botsecret").catchAll(_ => IO.none)) //todo: pass as param
+      _ <- when(x != secret)(fail(Attack))
       answer <-
         tg.reader.find[Store with ZEnv, Err](body) {
-          case tg.Update.PrivateQuery(chatid, x: String) if x == "/start" || x.startsWith("/start ") =>
+          case tg.Update.PrivateQuery(chatid, "/start") =>
             for {
-              r <- IO.effectTotal(SecureRandom())
-              xs <- IO.succeed(new Array[Byte](32))
-              _ <- IO.effectTotal(r.nextBytes(xs))
-              id <- IO.effectTotal(xs.hex)
+              r <- effectTotal(SecureRandom())
+              xs <- succeed(new Array[Byte](32))
+              _ <- effectTotal(r.nextBytes(xs))
+              id <- effectTotal(xs.hex)
               _ <- put(Key(id), Dat(chatid.toBytes))
               url = s"https://bot2.nobodytells.me/acpo?id=${id.utf8}"
               a  <- tg.writer.answerPrivateQuery(chatid, tg.QueryRes(url))
@@ -43,11 +44,11 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
                       (fiz_id, token) = ft
                     } yield "наразі функціонал не працює"
                   case None =>
-                    IO.succeed("виконайте /start знову")
+                    succeed("виконайте /start знову")
               a <- tg.writer.answerPrivateQuery(chatid, tg.QueryRes(res))
             } yield a
 
-          case x => IO.fail(NotImplemented(x))
+          case _ => succeed("{}".toChunk)
         }
     } yield response(answer, "application/json")
 }
@@ -67,9 +68,8 @@ def headers(len: Long, ct: String): Map[String, String] =
 
 object NoSecret
 object Attack
-case class NotImplemented(x: tg.Update)
 
-type Err = NoSecret.type | Attack.type | NotImplemented | SecurityException
+type Err = NoSecret.type | Attack.type
 
 given MessageCodec[Tuple2[String,String]] = caseCodecIdx
 
