@@ -23,7 +23,7 @@ val acpoHtml = """<!doctype html>
       </div>
     </div>
     <script>
-      let id = document.getElementById
+      let id = x => document.getElementById(x)
       id("submit").addEventListener("click", () => {
         fetch("https://portal.acpo.com.ua/account/login", {
           method: "POST"
