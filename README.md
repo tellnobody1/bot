@@ -9,5 +9,6 @@ sbt run
 
 ```sh
 curl -i --request POST http://localhost:8002/bot/123 -d '{"message":{"chat":{"id":1},"text":"/start"}}'
-curl -i --request POST http://localhost:8002/bot/123 -d '{"message":{"chat":{"id":1},"text":"acpo"}}'
+curl -i --request POST http://localhost:8002/bot/123 -d '{"message":{"chat":{"id":1},"text":"acpo/login"}}'
+curl -i --request POST http://localhost:8002/bot/123 -d '{"message":{"chat":{"id":1},"text":"acpo/get"}}'
 ```

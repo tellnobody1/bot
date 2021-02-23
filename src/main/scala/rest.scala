@@ -30,31 +30,33 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
               ).some
             )
 
-          // case Update.PrivateQuery(chatid, "acpo/login") =>
-          //   for {
-          //     r <- effectTotal(SecureRandom())
-          //     xs <- succeed(new Array[Byte](32))
-          //     _ <- effectTotal(r.nextBytes(xs))
-          //     id <- effectTotal(xs.hex)
-          //     _ <- put(Key(id), Dat(chatid.toBytes))
-          //     url = s"https://bot2.nobodytells.me/acpo?id=${id.utf8}"
-          //     a  <- writer.answerPrivateQuery(chatid, QueryRes(url))
-          //   } yield a
+          case Update.PrivateQuery(chatid, "acpo/login") =>
+            for {
+              _ <- putStrLn("acpo/login")
+              r <- effectTotal(SecureRandom())
+              xs <- succeed(new Array[Byte](32))
+              _ <- effectTotal(r.nextBytes(xs))
+              id <- effectTotal(xs.hex)
+              _ <- put(Key(id), Dat(chatid.toBytes))
+              url = s"https://bot2.nobodytells.me/acpo?id=${id.utf8}"
+              a  <- writer.answerPrivateQuery(chatid, QueryRes(url))
+            } yield a
 
-          // case Update.PrivateQuery(chatid, "acpo/get") =>
-          //   for {
-          //     dat <- get(Key(chatid.toBytes))
-          //     res <-
-          //       dat match
-          //         case Some(dat) =>
-          //           for {
-          //             ft <- dat.bytes.decode[(String,String)]
-          //             (fiz_id, token) = ft
-          //           } yield "наразі функціонал не працює"
-          //         case None =>
-          //           succeed("виконайте acpo/login знову")
-          //     a <- writer.answerPrivateQuery(chatid, QueryRes(res))
-          //   } yield a
+          case Update.PrivateQuery(chatid, "acpo/get") =>
+            for {
+              _ <- putStrLn("acpo/get")
+              dat <- get(Key(chatid.toBytes))
+              res <-
+                dat match
+                  case Some(dat) =>
+                    for {
+                      ft <- dat.bytes.decode[(String,String)]
+                      (fiz_id, token) = ft
+                    } yield "наразі функціонал не працює"
+                  case None =>
+                    succeed("виконайте acpo/login знову")
+              a <- writer.answerPrivateQuery(chatid, QueryRes(res))
+            } yield a
 
           case x =>
             for {
