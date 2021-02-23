@@ -56,7 +56,10 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
               a <- writer.answerPrivateQuery(chatid, QueryRes(res))
             } yield a
 
-          case _ => succeed("{}".toChunk)
+          case x =>
+            for {
+              _ <- putStrLn(x.toString)
+            } yield "{}".toChunk
         }
     } yield response(answer, "application/json")
 }
