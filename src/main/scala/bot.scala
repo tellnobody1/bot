@@ -18,6 +18,7 @@ val app =
                 _.tapError{
                   case Attack => putStrLn("attack is detected")
                   case NoSecret => putStrLn("bot secret is missing")
+                  case x: ftier.Err => putStrLn(x.toString)
                 }
               ).andThen(
                 _.catchAll(_ => succeed(notfound))
