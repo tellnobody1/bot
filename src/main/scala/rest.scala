@@ -3,7 +3,7 @@ import zero.ext._, option._
 import zio._, nio._, core._, clock._, stream._, console._, system._
 import zio.IO.{succeed, effectTotal, when, fail}
 import db._
-import ftier._, tg._, ws._, udp._, http._
+import ftier._, tg._, ws._, udp._, http._, httpClient._
 import zd.proto._, api.MessageCodec, macrosapi._
 
 val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] = {
@@ -21,9 +21,9 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
       secret <- ZIO.require[ZEnv, Err, String](NoSecret)(env("botsecret").catchAll(_ => IO.none)) //todo: pass as param
       _ <- when(x != secret)(fail(Attack))
       answer <-
-        reader.find[Store with ZEnv, Err](body) {
+        reader.find[Store with ZEnv, Err](body) { //todo: remove this callback?
           case Update.PrivateQuery(chatid, "/start") =>
-            writer.answerPrivateQuery(chatid, QueryRes("Вітаю"),
+            writer.answerPrivateQuery(chatid, QueryRes("вітаю"),
               ReplyKeyboardMarkup(
                 ("acpo/login" :: "acpo/get" :: Nil) ::
                 Nil
@@ -32,7 +32,6 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
 
           case Update.PrivateQuery(chatid, "acpo/login") =>
             for {
-              _ <- putStrLn("acpo/login")
               r <- effectTotal(SecureRandom())
               xs <- succeed(new Array[Byte](32))
               _ <- effectTotal(r.nextBytes(xs))
@@ -44,7 +43,6 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
 
           case Update.PrivateQuery(chatid, "acpo/get") =>
             for {
-              _ <- putStrLn("acpo/get")
               dat <- get(Key(chatid.toBytes))
               res <-
                 dat match
@@ -52,7 +50,15 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
                     for {
                       ft <- dat.bytes.decode[(String,String)]
                       (fiz_id, token) = ft
-                    } yield "наразі функціонал не працює"
+                      cp <- connectionPool
+                      content = s"""{"fiz_id":$fiz_id}""".toChunk
+                      hs = Map(
+                        "Content-Type" -> "application/json"
+                      , "Authorization" -> s"Bearer $token"
+                      )
+                      r <- httpClient.sendAsync(cp, Request("POST", "https://portal.acpo.com.ua/fiz/alldata", hs, content))
+                      usd <- effect(json.readTree(r.body.toArray).findPath("inv_sum_usd").asDouble).orDie
+                    } yield s"ваш дохід: $$$usd"
                   case None =>
                     succeed("виконайте acpo/login знову")
               a <- writer.answerPrivateQuery(chatid, QueryRes(res))
@@ -82,7 +88,7 @@ def headers(len: Long, ct: String): Map[String, String] =
 object NoSecret
 object Attack
 
-type Err = NoSecret.type | Attack.type
+type Err = NoSecret.type | Attack.type | ftier.Err
 
 given MessageCodec[Tuple2[String,String]] = caseCodecIdx
 
