@@ -16,9 +16,9 @@ val app =
             succeed(httpHandler
               .andThen(
                 _.tapError{
-                  case Attack => putStrLn("attack is detected")
+                  case Attack => IO.unit //putStrLn("attack is detected")
                   case NoSecret => putStrLn("bot secret is missing")
-                  case x: ftier.Err => putStrLn(x.toString)
+                  case x: ftier.Err => putStrLn(x.toString) //todo: http client err
                 }
               ).andThen(
                 _.catchAll(_ => succeed(notfound))
