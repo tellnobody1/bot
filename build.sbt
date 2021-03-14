@@ -15,11 +15,14 @@ fork := true
 
 scalacOptions ++= Seq(
   "-language:postfixOps"
-, "-Yexplicit-nulls"
 , "-language:strictEquality"
+, "-Yexplicit-nulls"
+// , "-source", "future-migration"
+// , "-deprecation"
+// , "-rewrite"
 )
 
-enablePlugins(JavaAppPackaging)
+enablePlugins(JavaAppPackaging, DeploySSH)
 mappings in (Compile, packageDoc) := Seq()
 
 turbo := true
@@ -27,3 +30,32 @@ useCoursier := true
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 resolvers += Resolver.JCenterRepository
+
+import deployssh.DeploySSH.{ServerConfig, ArtifactSSH}
+import fr.janalyse.ssh.SSH
+deployConfigs += ServerConfig(name="server", host="server", user=Some("ubuntu"))
+deployArtifacts += ArtifactSSH((packageBin in Universal).value, "prj/bot")
+deploySshExecBefore ++=
+  Seq(
+    (ssh: SSH) => ssh.shell{ shell =>
+      shell.execute("cd prj/bot")
+      shell.execute("touch pid")
+      val pid = shell.execute("cat pid")
+      if (pid.nonEmpty) {
+        shell.execute(s"kill ${pid}; sleep 1000; kill -9 ${pid}")
+        shell.execute("rm pid")
+      }
+    }
+  )
+deploySshExecAfter ++=
+  Seq(
+    (ssh: SSH) => ssh.shell{ shell =>
+      val name = (packageName in Universal).value
+      shell.execute("cd prj/bot")
+      shell.execute(s"rm $name")
+      shell.execute(s"unzip -q -o ${name}.zip")
+      shell.execute(s"rm *.zip")
+      shell.execute(s"nohup ./${name}/bin/bot &")
+      shell.execute("echo $! > pid")
+    }
+  )

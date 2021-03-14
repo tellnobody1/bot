@@ -37,7 +37,7 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
               _ <- effectTotal(r.nextBytes(xs))
               id <- effectTotal(xs.hex)
               _ <- put(Key(id), Dat(chatid.toBytes))
-              url = s"https://bot2.nobodytells.me/acpo?id=${id.utf8}"
+              url = s"https://bot.nobodytells.me/acpo?id=${id.utf8}"
               a  <- writer.answerPrivateQuery(chatid, QueryRes(url))
             } yield a
 

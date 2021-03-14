@@ -2,7 +2,9 @@
 
 ```sh
 export botsecret=123
-sbt run
+sbt> run
+export botport=8080
+sbt> deploySsh server
 ```
 
 ## tests

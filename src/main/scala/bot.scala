@@ -6,7 +6,7 @@ import zd.proto.api._
 
 val app =
   (for {
-    envport <- env("PORT")
+    envport <- env("botport")
     port = envport.flatMap(_.toIntOption).getOrElse(8002)
     _ <- putStrLn(s"http://localhost:$port")
     addr <- SocketAddress.inetSocketAddress(port)
