@@ -1,5 +1,7 @@
 # bot
 
+[![tg](https://img.shields.io/badge/telegram-bot-blue)](https://t.me/tellnobodybot)
+
 ```sh
 export botsecret=123
 sbt> run
