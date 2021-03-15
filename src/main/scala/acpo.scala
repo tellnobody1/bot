@@ -1,4 +1,4 @@
-import zio._
+import zio.*
 
 val acpoHtml = """<!doctype html>
 <html lang="uk">

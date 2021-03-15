@@ -1,18 +1,18 @@
 import java.security.SecureRandom
-import zero.ext._, option._
-import zio._, nio._, core._, clock._, stream._, console._, system._
+import zero.ext.*, option.*
+import zio.*, nio.*, core.*, clock.*, stream.*, console.*, system.*
 import zio.IO.{succeed, effectTotal, when, fail, effect}
-import db._
-import ftier._, tg._, ws._, udp._, http._, httpClient._
-import zd.proto._, api.MessageCodec, macrosapi._
+import db.*
+import ftier.*, tg.*, ws.*, udp.*, http.*, httpClient.*
+import proto.*, api.MessageCodec, macros.*
 
-val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] = {
+val httpHandler: PartialFunction[Request, ZIO[Store & ZEnv, Err, Response]] = {
   case Request("GET", Root / "acpo", _, _) => IO.succeed(response(acpoHtml, "text/html"))
 
   case Request("POST", (Root / "acpo" / "link") ? ("id"*id & "fiz_id"*fiz_id & "token"*token), _, _) =>
     for {
       chatid <- ZIO.require(Attack)(get(Key(id.utf8)))
-      dat <- ((fiz_id, token)).encode.map(Dat.apply)
+      dat <- encode((fiz_id, token)).map(Dat.apply)
       _ <- put(chatid.toKey, dat)
     } yield response("Готово.".toChunk, "text/plain")
 
@@ -21,7 +21,7 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
       secret <- ZIO.require[ZEnv, Err, String](NoSecret)(env("botsecret").catchAll(_ => IO.none)) //todo: pass as param
       _ <- when(x != secret)(fail(Attack))
       answer <-
-        reader.find[Store with ZEnv, Err](body) { //todo: remove this callback?
+        reader.find[Store & ZEnv, Err](body) { //todo: remove this callback?
           case Update.PrivateQuery(chatid, "/start") =>
             writer.answerPrivateQuery(chatid, QueryRes("вітаю"),
               ReplyKeyboardMarkup(
@@ -29,6 +29,10 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
                 Nil
               ).some
             )
+
+          case Update.PrivateQuery(chatid, "/help") =>
+            val url = "https://github.com/tellnobody1/bot/issues"
+            writer.answerPrivateQuery(chatid, QueryRes(s"""<a href="$url">підтримок</a>"""))
 
           case Update.PrivateQuery(chatid, "acpo/login") =>
             for {
@@ -48,7 +52,7 @@ val httpHandler: PartialFunction[Request, ZIO[Store with ZEnv, Err, Response]] =
                 dat match
                   case Some(dat) =>
                     for {
-                      ft <- dat.bytes.decode[(String,String)]
+                      ft <- decode[(String,String)](dat.bytes)
                       (fiz_id, token) = ft
                       cp <- connectionPool
                       content = s"""{"fiz_id":$fiz_id}""".toChunk

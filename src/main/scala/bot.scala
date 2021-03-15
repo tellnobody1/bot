@@ -1,8 +1,8 @@
-import zero.ext._, option._
-import zio._, nio._, core._, clock._, stream._, console._, system._, IO.succeed
-import db._
-import ftier.{Err=>_,_}, ws._, udp._, http._
-import zd.proto.api._
+import zero.ext.*, option.*
+import zio.*, nio.*, core.*, clock.*, stream.*, console.*, system.*, IO.succeed
+import db.*
+import ftier.{Err as _,*}, ws.*, udp.*, http.*
+import proto.api.*
 
 val app =
   (for {
@@ -10,7 +10,7 @@ val app =
     port = envport.flatMap(_.toIntOption).getOrElse(8002)
     _ <- putStrLn(s"http://localhost:$port")
     addr <- SocketAddress.inetSocketAddress(port)
-    store <- ZIO.environment[Store with ZEnv]
+    store <- ZIO.environment[Store & ZEnv]
     _  <- httpServer.bind(
             addr,
             succeed(httpHandler

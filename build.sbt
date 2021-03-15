@@ -1,9 +1,9 @@
-scalaVersion := "3.0.0-M3"
+scalaVersion := "3.0.0-RC1"
 version := zero.git.version()
 
 libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-streams"  % "1.0.4-2"
-, "dev.zio" %% "zio-test-sbt" % "1.0.4-2" % Test
+  "dev.zio" %% "zio-streams"  % "1.0.5"
+, "dev.zio" %% "zio-test-sbt" % "1.0.5" % Test
 )
 testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
 
@@ -17,9 +17,10 @@ scalacOptions ++= Seq(
   "-language:postfixOps"
 , "-language:strictEquality"
 , "-Yexplicit-nulls"
-// , "-source", "future-migration"
-// , "-deprecation"
-// , "-rewrite"
+, "-source", "future-migration"
+, "-deprecation"
+, "-rewrite"
+, "release", "15"
 )
 
 enablePlugins(JavaAppPackaging, DeploySSH)
@@ -34,7 +35,7 @@ resolvers += Resolver.JCenterRepository
 import deployssh.DeploySSH.{ServerConfig, ArtifactSSH}
 import fr.janalyse.ssh.SSH
 deployConfigs += ServerConfig(name="server", host="server", user=Some("ubuntu"))
-deployArtifacts += ArtifactSSH((packageBin in Universal).value, "prj/bot")
+deployArtifacts += ArtifactSSH((Universal / packageBin).value, "prj/bot")
 deploySshExecBefore ++=
   Seq(
     (ssh: SSH) => ssh.shell{ shell =>
