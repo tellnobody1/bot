@@ -1,36 +1,24 @@
-scalaVersion := "3.0.0-RC1"
-version := zero.git.version()
-
-libraryDependencies ++= Seq(
-  "dev.zio" %% "zio-streams"  % "1.0.5"
-, "dev.zio" %% "zio-test-sbt" % "1.0.5" % Test
-)
-testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+lazy val bot = project.in(file("."))
+  .settings(
+    scalaVersion := "3.0.0-RC2"
+  , libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-streams"  % "1.0.6"
+    , "dev.zio" %% "zio-test-sbt" % "1.0.6" % Test
+    )
+  , testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
+  , fork := true
+  , scalacOptions ++= Seq(
+      "-language:postfixOps"
+    , "-language:strictEquality"
+    , "-Yexplicit-nulls"
+    , "-source", "future-migration" , "-deprecation"
+    , "release", "11"
+    )
+  ).dependsOn(db, ftier).enablePlugins(JavaAppPackaging, DeploySSH)
 
 lazy val db = project.in(file("deps/db"))
-lazy val frontier = project.in(file("deps/frontier"))
-dependsOn(db, frontier)
 
-fork := true
-
-scalacOptions ++= Seq(
-  "-language:postfixOps"
-, "-language:strictEquality"
-, "-Yexplicit-nulls"
-, "-source", "future-migration"
-, "-deprecation"
-, "-rewrite"
-, "release", "15"
-)
-
-enablePlugins(JavaAppPackaging, DeploySSH)
-mappings in (Compile, packageDoc) := Seq()
-
-turbo := true
-useCoursier := true
-Global / onChangedBuildSource := ReloadOnSourceChanges
-
-resolvers += Resolver.JCenterRepository
+lazy val ftier = project.in(file("deps/frontier"))
 
 import deployssh.DeploySSH.{ServerConfig, ArtifactSSH}
 import fr.janalyse.ssh.SSH
@@ -43,7 +31,7 @@ deploySshExecBefore ++=
       shell.execute("touch pid")
       val pid = shell.execute("cat pid")
       if (pid.nonEmpty) {
-        shell.execute(s"kill ${pid}; sleep 1000; kill -9 ${pid}")
+        shell.execute(s"kill ${pid}")
         shell.execute("rm pid")
       }
     }
@@ -51,7 +39,7 @@ deploySshExecBefore ++=
 deploySshExecAfter ++=
   Seq(
     (ssh: SSH) => ssh.shell{ shell =>
-      val name = (packageName in Universal).value
+      val name = (Universal / packageName).value
       shell.execute("cd prj/bot")
       shell.execute(s"rm $name")
       shell.execute(s"unzip -q -o ${name}.zip")
@@ -60,3 +48,7 @@ deploySshExecAfter ++=
       shell.execute("echo $! > pid")
     }
   )
+
+turbo := true
+useCoursier := true
+Global / onChangedBuildSource := ReloadOnSourceChanges

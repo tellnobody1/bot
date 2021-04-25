@@ -1,33 +1,32 @@
 import java.security.SecureRandom
-import zero.ext.*, option.*
 import zio.*, nio.*, core.*, clock.*, stream.*, console.*, system.*
 import zio.IO.{succeed, effectTotal, when, fail, effect}
 import db.*
-import ftier.*, tg.*, ws.*, udp.*, http.*, httpClient.*
-import proto.*, api.MessageCodec, macros.*
+import ftier.*, tg.*, ws.*, udp.*, http.*, server.*, client.*, json.*
+import proto.*
 
-val httpHandler: PartialFunction[Request, ZIO[Store & ZEnv, Err, Response]] = {
+val httpHandler: HttpHandler[Store & ZEnv] = {
   case Request("GET", Root / "acpo", _, _) => IO.succeed(response(acpoHtml, "text/html"))
 
   case Request("POST", (Root / "acpo" / "link") ? ("id"*id & "fiz_id"*fiz_id & "token"*token), _, _) =>
     for {
       chatid <- ZIO.require(Attack)(get(Key(id.utf8)))
-      dat <- encode((fiz_id, token)).map(Dat.apply)
+      dat <- (fiz_id, token).bencode.map(Dat.apply)
       _ <- put(chatid.toKey, dat)
     } yield response("Готово.".toChunk, "text/plain")
 
   case Request("POST", Root / "bot" / x, _, body) =>
     for {
-      secret <- ZIO.require[ZEnv, Err, String](NoSecret)(env("botsecret").catchAll(_ => IO.none)) //todo: pass as param
+      secret <- ZIO.require(NoSecret)(env("botsecret").catchAll(_ => IO.none)) //todo: pass as param
       _ <- when(x != secret)(fail(Attack))
       answer <-
-        reader.find[Store & ZEnv, Err](body) { //todo: remove this callback?
+        reader.find(body) { //todo: remove this callback?
           case Update.PrivateQuery(chatid, "/start") =>
             writer.answerPrivateQuery(chatid, QueryRes("вітаю"),
-              ReplyKeyboardMarkup(
+              Some(ReplyKeyboardMarkup(
                 ("acpo/login" :: "acpo/get" :: Nil) ::
                 Nil
-              ).some
+              ))
             )
 
           case Update.PrivateQuery(chatid, "/help") =>
@@ -52,7 +51,7 @@ val httpHandler: PartialFunction[Request, ZIO[Store & ZEnv, Err, Response]] = {
                 dat match
                   case Some(dat) =>
                     for {
-                      ft <- decode[(String,String)](dat.bytes)
+                      ft <- dat.bytes.bdecode[(String,String)]
                       (fiz_id, token) = ft
                       cp <- connectionPool
                       content = s"""{"fiz_id":$fiz_id}""".toChunk
@@ -60,12 +59,12 @@ val httpHandler: PartialFunction[Request, ZIO[Store & ZEnv, Err, Response]] = {
                         "Content-Type" -> "application/json"
                       , "Authorization" -> s"Bearer $token"
                       )
-                      r <- httpClient.sendAsync(cp, Request("POST", "https://portal.acpo.com.ua/fiz/alldata", hs, content))
-                      tree <- effect(json.readTree(r.body.toArray).nn).orDie
-                      in_sum <- effect(tree.findPath("in_sum").asDouble).orDie
-                      bal_sum_usd <- effect(tree.findPath("bal_sum_usd").asDouble).orDie
-                      inv_percent_usd <- effect(tree.findPath("inv_percent_usd").asDouble).orDie
-                      inv_sum_usd <- effect(tree.findPath("inv_sum_usd").asDouble).orDie
+                      r <- http.client.sendAsync(cp, Request("POST", "https://portal.acpo.com.ua/fiz/alldata", hs, content))
+                      tree <- jtree(r.body)
+                      in_sum <- effect(tree.findPath("in_sum").nn.asDouble).orDie
+                      bal_sum_usd <- effect(tree.findPath("bal_sum_usd").nn.asDouble).orDie
+                      inv_percent_usd <- effect(tree.findPath("inv_percent_usd").nn.asDouble).orDie
+                      inv_sum_usd <- effect(tree.findPath("inv_sum_usd").nn.asDouble).orDie
                     } yield s"""
                         |інвестовано: ${f"$in_sum%.2f₴"}
                         |баланс: ${f"$$$bal_sum_usd%.2f"}
@@ -98,10 +97,8 @@ def headers(len: Long, ct: String): Map[String, String] =
   , "Content-Type" -> ct
   )
 
-object NoSecret
-object Attack
-
-type Err = NoSecret.type | Attack.type | ftier.Err
+object NoSecret extends Throwable
+object Attack extends Throwable
 
 given MessageCodec[Tuple2[String,String]] = caseCodecIdx
 
