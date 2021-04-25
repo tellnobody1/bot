@@ -41,7 +41,7 @@ val httpHandler: PartialFunction[Request, ZIO[Store & ZEnv, Err, Response]] = {
               _ <- effectTotal(r.nextBytes(xs))
               id <- effectTotal(xs.hex)
               _ <- put(Key(id), Dat(chatid.toBytes))
-              url = s"https://bot.nobodytells.me/acpo?id=${id.utf8}"
+              url = s"https://bot.tellnobody.space/acpo?id=${id.utf8}"
               a  <- writer.answerPrivateQuery(chatid, QueryRes(url))
             } yield a
 
@@ -61,10 +61,19 @@ val httpHandler: PartialFunction[Request, ZIO[Store & ZEnv, Err, Response]] = {
                       , "Authorization" -> s"Bearer $token"
                       )
                       r <- httpClient.sendAsync(cp, Request("POST", "https://portal.acpo.com.ua/fiz/alldata", hs, content))
-                      usd <- effect(json.readTree(r.body.toArray).findPath("inv_sum_usd").asDouble).orDie
-                    } yield s"ваш дохід: $$$usd"
+                      tree <- effect(json.readTree(r.body.toArray).nn).orDie
+                      in_sum <- effect(tree.findPath("in_sum").asDouble).orDie
+                      bal_sum_usd <- effect(tree.findPath("bal_sum_usd").asDouble).orDie
+                      inv_percent_usd <- effect(tree.findPath("inv_percent_usd").asDouble).orDie
+                      inv_sum_usd <- effect(tree.findPath("inv_sum_usd").asDouble).orDie
+                    } yield s"""
+                        |інвестовано: ${f"$in_sum%.2f₴"}
+                        |баланс: ${f"$$$bal_sum_usd%.2f"}
+                        |дохідність: ${f"$inv_percent_usd%%"}
+                        |дохід: ${f"$$$inv_sum_usd%.2f"}
+                        """.stripMargin.stripPrefix("\n").stripSuffix("\n")
                   case None =>
-                    succeed("виконайте acpo/login знову")
+                    succeed("виконайте acpo/login")
               a <- writer.answerPrivateQuery(chatid, QueryRes(res))
             } yield a
 
