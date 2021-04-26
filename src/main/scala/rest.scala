@@ -59,18 +59,23 @@ val httpHandler: HttpHandler[Store & ZEnv] = {
                         "Content-Type" -> "application/json"
                       , "Authorization" -> s"Bearer $token"
                       )
-                      r <- http.client.sendAsync(cp, Request("POST", "https://portal.acpo.com.ua/fiz/alldata", hs, content))
-                      tree <- jtree(r.body)
-                      in_sum <- effect(tree.findPath("in_sum").nn.asDouble).orDie
-                      bal_sum_usd <- effect(tree.findPath("bal_sum_usd").nn.asDouble).orDie
-                      inv_percent_usd <- effect(tree.findPath("inv_percent_usd").nn.asDouble).orDie
-                      inv_sum_usd <- effect(tree.findPath("inv_sum_usd").nn.asDouble).orDie
-                    } yield s"""
-                        |інвестовано: ${f"$in_sum%.2f₴"}
-                        |баланс: ${f"$$$bal_sum_usd%.2f"}
-                        |дохідність: ${f"$inv_percent_usd%%"}
-                        |дохід: ${f"$$$inv_sum_usd%.2f"}
-                        """.stripMargin.stripPrefix("\n").stripSuffix("\n")
+                      r <- http.client.sendAsync(cp, Request("POST", "https://portal.acpo.com.ua/fiz/alldata", hs, content)).flatMap{  r =>
+                        for {
+                          tree <- jtree(r.body)
+                          in_sum <- effect(tree.findPath("in_sum").nn.asDouble).orDie
+                          bal_sum_usd <- effect(tree.findPath("bal_sum_usd").nn.asDouble).orDie
+                          inv_percent_usd <- effect(tree.findPath("inv_percent_usd").nn.asDouble).orDie
+                          inv_sum_usd <- effect(tree.findPath("inv_sum_usd").nn.asDouble).orDie
+                        } yield s"""
+                          |інвестовано: ${f"$in_sum%.2f₴"}
+                          |баланс: ${f"$$$bal_sum_usd%.2f"}
+                          |дохідність: $$$inv_percent_usd%
+                          |дохід: ${f"$$$inv_sum_usd%.2f"}
+                          """.stripMargin.stripPrefix("\n").stripSuffix("\n")
+                      }.catchAll{
+                        case http.client.Timeout => IO.succeed("сервіс недоступний — спробуйте пізніше")
+                      }
+                    } yield r
                   case None =>
                     succeed("виконайте acpo/login")
               a <- writer.answerPrivateQuery(chatid, QueryRes(res))

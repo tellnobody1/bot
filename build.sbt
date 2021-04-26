@@ -14,7 +14,7 @@ lazy val bot = project.in(file("."))
     , "-source", "future-migration" , "-deprecation"
     , "release", "11"
     )
-  ).dependsOn(db, ftier).enablePlugins(JavaAppPackaging, DeploySSH)
+  ).dependsOn(db, ftier).enablePlugins(PackPlugin, DeploySSH)
 
 lazy val db = project.in(file("deps/db"))
 
@@ -23,7 +23,7 @@ lazy val ftier = project.in(file("deps/frontier"))
 import deployssh.DeploySSH.{ServerConfig, ArtifactSSH}
 import fr.janalyse.ssh.SSH
 deployConfigs += ServerConfig(name="server", host="server", user=Some("ubuntu"))
-deployArtifacts += ArtifactSSH((Universal / packageBin).value, "prj/bot")
+deployArtifacts += ArtifactSSH(packArchiveTgz.value, "prj/bot")
 deploySshExecBefore ++=
   Seq(
     (ssh: SSH) => ssh.shell{ shell =>
@@ -39,15 +39,18 @@ deploySshExecBefore ++=
 deploySshExecAfter ++=
   Seq(
     (ssh: SSH) => ssh.shell{ shell =>
-      val name = (Universal / packageName).value
+      val name = packArchiveName.value
       shell.execute("cd prj/bot")
       shell.execute(s"rm $name")
-      shell.execute(s"unzip -q -o ${name}.zip")
-      shell.execute(s"rm *.zip")
-      shell.execute(s"nohup ./${name}/bin/bot &")
+      shell.execute(s"rm nohup.out")
+      shell.execute(s"tar -xzf ${name}.tar.gz")
+      shell.execute(s"rm *.tar.gz")
+      shell.execute(s"nohup ./${name}/bin/run &")
       shell.execute("echo $! > pid")
     }
   )
+packGenerateWindowsBatFile := false
+packGenerateMakefile := false
 
 turbo := true
 useCoursier := true

@@ -27,3 +27,5 @@ extension [A](x: A)
 extension (x: IArray[Byte])
   inline def utf8: String = String(x.toArray, "utf8")
   inline def bdecode[A](using proto.MessageCodec[A]): UIO[A] = IO.effect(proto.decodeI(x)).orDie
+
+inline def unit: Unit = ()

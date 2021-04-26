@@ -15,6 +15,6 @@ val app =
             httpHandler,
             _ => IO.unit,
           )
-  } yield ()).provideCustomLayer(Store.live("data"))
+  } yield unit).provideCustomLayer(Store.live("data"))
 
 @main def run(): Unit = Runtime.default.unsafeRun(app)
