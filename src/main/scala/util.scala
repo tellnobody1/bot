@@ -29,3 +29,8 @@ extension (x: IArray[Byte])
   inline def bdecode[A](using proto.MessageCodec[A]): UIO[A] = IO.effect(proto.decodeI(x)).orDie
 
 inline def unit: Unit = ()
+
+extension [A](x: A | Null)
+  inline def toOption: Option[A] = if x == null then None else Some(x)
+
+given [A]: CanEqual[A, A | Null] = CanEqual.derived

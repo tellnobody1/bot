@@ -25,7 +25,7 @@ val httpHandler: HttpHandler[Store & ZEnv] = {
             writer.answerPrivateQuery(chatid, QueryRes("вітаю"),
               Some(ReplyKeyboardMarkup(
                 ("acpo/login" :: "acpo/get" :: Nil) ::
-                ("інфляція" :: Nil) ::
+                ("інфляція (фактична)" :: "інфляція (прогноз)" :: Nil) ::
                 Nil
               ))
             )
@@ -82,7 +82,35 @@ val httpHandler: HttpHandler[Store & ZEnv] = {
               a <- writer.answerPrivateQuery(chatid, QueryRes(res))
             } yield a
 
-          case Update.PrivateQuery(chatid, "інфляція") =>
+          case Update.PrivateQuery(chatid, "інфляція (фактична)") =>
+            import org.apache.poi.*, ss.usermodel.WorkbookFactory
+            import java.net.URL
+            import scala.util.Using
+            import java.time.format.TextStyle
+            import java.util.Locale
+            for {
+              res <-
+                IO.fromTry{
+                  Using.Manager{ use =>
+                    val is = use(URL("https://bank.gov.ua/files/macro/CPI_m.xlsx").openStream().nn)
+                    val wb = use(WorkbookFactory.create(is).nn)
+                    val sheet = wb.getSheet("1").nn
+                    val rowDates = sheet.getRow(1).nn
+                    val lastCellNum = rowDates.getLastCellNum-1
+                    val date = rowDates.getCell(lastCellNum).toOption.flatMap(_.getLocalDateTimeCellValue.toOption).flatMap(_.getMonth.toOption).fold("-")(_.getDisplayName(TextStyle.FULL_STANDALONE, Locale("uk")))
+                    val rowCpis = sheet.getRow(2).nn
+                    val cpi = rowCpis.getCell(lastCellNum).toOption.map(_.getNumericCellValue).map(x => f"$x%.1f%%").getOrElse("-")
+                    s"""Індекс споживчих цін
+                    |(до відповідного місяця попереднього року)
+                    |• $cpi
+                    |$date
+                    """.stripMargin
+                  }
+                }
+              a <- writer.answerPrivateQuery(chatid, QueryRes(res))
+            } yield a
+
+          case Update.PrivateQuery(chatid, "інфляція (прогноз)") =>
             import org.apache.poi.*, ss.usermodel.WorkbookFactory
             import java.net.URL
             import scala.util.Using
@@ -109,6 +137,7 @@ val httpHandler: HttpHandler[Store & ZEnv] = {
                 }
               a <- writer.answerPrivateQuery(chatid, QueryRes(res))
             } yield a
+
           case x =>
             for {
               _ <- putStrLn(x.toString)
