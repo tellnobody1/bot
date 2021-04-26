@@ -4,6 +4,7 @@ lazy val bot = project.in(file("."))
   , libraryDependencies ++= Seq(
       "dev.zio" %% "zio-streams"  % "1.0.6"
     , "dev.zio" %% "zio-test-sbt" % "1.0.6" % Test
+    , "org.apache.poi" % "poi-ooxml" % "5.0.0"
     )
   , testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework")
   , fork := true

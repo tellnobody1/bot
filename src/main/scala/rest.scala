@@ -25,6 +25,7 @@ val httpHandler: HttpHandler[Store & ZEnv] = {
             writer.answerPrivateQuery(chatid, QueryRes("вітаю"),
               Some(ReplyKeyboardMarkup(
                 ("acpo/login" :: "acpo/get" :: Nil) ::
+                ("інфляція" :: Nil) ::
                 Nil
               ))
             )
@@ -71,7 +72,7 @@ val httpHandler: HttpHandler[Store & ZEnv] = {
                           |баланс: ${f"$$$bal_sum_usd%.2f"}
                           |дохідність: $$$inv_percent_usd%
                           |дохід: ${f"$$$inv_sum_usd%.2f"}
-                          """.stripMargin.stripPrefix("\n").stripSuffix("\n")
+                          """.stripMargin
                       }.catchAll{
                         case http.client.Timeout => IO.succeed("сервіс недоступний — спробуйте пізніше")
                       }
@@ -81,6 +82,33 @@ val httpHandler: HttpHandler[Store & ZEnv] = {
               a <- writer.answerPrivateQuery(chatid, QueryRes(res))
             } yield a
 
+          case Update.PrivateQuery(chatid, "інфляція") =>
+            import org.apache.poi.*, ss.usermodel.WorkbookFactory
+            import java.net.URL
+            import scala.util.Using
+            import java.time.format.TextStyle
+            import java.util.Locale
+            for {
+              res <-
+                IO.fromTry{
+                  Using.Manager{ use =>
+                    val is = use(URL("https://bank.gov.ua/files/macro/Surveys_price.xlsx").openStream().nn)
+                    val wb = use(WorkbookFactory.create(is).nn)
+                    val sheet = wb.getSheet("UKR").nn
+                    val lastRowNum = sheet.getLastRowNum.nn
+                    val lastRow = sheet.getRow(lastRowNum).nn
+                    val date = lastRow.getCell(0).nn.getLocalDateTimeCellValue.nn.getMonth.nn.getDisplayName(TextStyle.FULL_STANDALONE, Locale("uk"))
+                    val banks = lastRow.getCell(1).nn.getNumericCellValue
+                    val analysts = lastRow.getCell(4).nn.getNumericCellValue
+                    s"""Інфляційні очікування на наступні 12 місяців
+                    |• банків: ${f"$banks%.1f"}%
+                    |• фінансових аналітиків: ${f"$analysts%.1f"}%
+                    |$date
+                    """.stripMargin
+                  }
+                }
+              a <- writer.answerPrivateQuery(chatid, QueryRes(res))
+            } yield a
           case x =>
             for {
               _ <- putStrLn(x.toString)
