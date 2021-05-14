@@ -4,9 +4,8 @@ import ftier.*, ws.*, udp.*, http.*
 import proto.*
 
 val app =
+  val port = 8002
   (for {
-    envport <- env("botport")
-    port = envport.flatMap(_.toIntOption).getOrElse(8002)
     _ <- putStrLn(s"http://localhost:$port")
     addr <- SocketAddress.inetSocketAddress(port)
     store <- ZIO.environment[Store & ZEnv]

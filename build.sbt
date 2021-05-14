@@ -46,8 +46,9 @@ deploySshExecAfter ++=
       shell.execute(s"rm nohup.out")
       shell.execute(s"tar -xzf ${name}.tar.gz")
       shell.execute(s"rm *.tar.gz")
-      shell.execute(s"nohup ./${name}/bin/run &")
-      shell.execute("echo $! > pid")
+      shell.execute(s"echo 'nohup ./${name}/bin/run > /dev/null 2>&1 & echo $$! > pid' > start.sh")
+      shell.execute("chmod +x start.sh")
+      shell.execute("./start.sh")
     }
   )
 packGenerateWindowsBatFile := false
